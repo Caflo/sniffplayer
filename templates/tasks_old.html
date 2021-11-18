@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<head>
+
+</head>
+<html>
+<body>
+
+
+<table style="width:100%">
+  <tr>
+    <th>ID</th>
+    <th>Interface</th>
+    <th>Active</th>
+    <th>Thread ID</th>
+    <th>Dynamic</th>
+    <th>Schedule</th>
+  </tr>
+  {% for task in sniffer_tasks %}
+  <tr>
+    <td>{{ task.id }}</td>
+    <td>{{ task.iface }}</td>
+    <td>{{ task.active }}</td>
+    <td>{{ task.thread_id }}</td>
+    <td>{{ task.dynamic }}</td>
+    <td>{{ task.schedule }}</td>
+    <td></td>
+  </tr>
+  {% endfor %}
+</table>
+
+<p>To undestand the example better, we have added borders to the table.</p>
+
+</body>
+</html>
+
