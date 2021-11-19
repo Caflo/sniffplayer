@@ -4,7 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
+    <script src="https://unpkg.com/feather-icons"></script>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet"/>
+
     <style>
         .sidebar {
             position: fixed;
@@ -43,18 +47,6 @@
         .sidebar .nav-link.active {
             color: #0d6efd;
         }
-        DIV.table 
-        {
-            display:table;
-        }
-        FORM.tr, DIV.tr
-        {
-            display:table-row;
-        }
-        SPAN.td
-        {
-            display:table-cell;
-        }
     </style>
 </head>
 <body>
@@ -85,20 +77,26 @@
                     <ul class="nav flex-column">
                         <li class="nav-item">
                           <a class="nav-link" href="/dashboard">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-home"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                            <i data-feather="home"></i>
                             <span class="ml-2">Dashboard</span>
                           </a>
                         </li>
                         <li class="nav-item">
                           <a class="nav-link active" aria-current="page" href="#">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+                            <i data-feather="file-text"></i>
                             <span class="ml-2">Tasks</span>
                           </a>
                         </li>
                         <li class="nav-item">
-                          <a class="nav-link" href="/ifaces">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-shopping-cart"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                          <a class="nav-link" href="/osinfo">
+                            <i data-feather="cpu"></i>
                             <span class="ml-2">OS info</span>
+                          </a>
+                        </li>
+                        <li class="nav-item">
+                          <a class="nav-link" href="/files">
+                            <i data-feather="download"></i>
+                            <span class="ml-2">Remote files</span>
                           </a>
                         </li>
                       </ul>
@@ -112,47 +110,62 @@
                     </ol>
                 </nav>
                 <h1 class="h2">Tasks</h1>
-                <div class="table" style="width: 70%;">
-                <tr>
-                    <th scope="col">ID</th>
-                    <th scope="col">Interface</th>
-                    <th scope="col">Active</th>
-                    <th scope="col">Thread ID</th>
-                    <th scope="col">Sniff mode</th>
-                    <th scope="col">Schedule</th>
-                    <th scope="col">Action</th>
-                </tr>
+                <div class="table-responsive">
+                    <table id="task_table" class="table">
+                        <thead>
+                            <tr>
+                                <th scope="col">ID</th>
+                                <th scope="col">Interface</th>
+                                <th scope="col">Active</th>
+                                <th scope="col">Thread ID</th>
+                                <th scope="col">Sniff mode</th>
+                                <th scope="col">Schedule</th>
+                                <th scope="col">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
 
-                {% for task in tasks %}
-                    <form class="tr" method="post" action="/remove_task">
-                    <span class="td">
-                        <input type="hidden" name="id" value="{{ task['_id'] }}">{{ task['_id'] }}</span>
-                    <span class="td">{{ task.iface }}</span>
-                    <span class="td">{{ task.active }}</span>
-                    <span class="td">{{ task.thread_id }}</span>
-                    {% if task.dynamic %}
-                        <span class="td">Dynamic</span>
-                    {% else %}
-                        <span class="td">Static</span>
-                    {% endif %}
-                    <span class="td">{{ task.schedule }}</span>
-                    {% if task.active %}
-                        <span class="td">
-                        <button type="submit" formaction="/stop_sniffer" class="btn btn-danger" role="button">Stop</button>
-                        <button type="submit" class="btn btn-danger" role="button">Delete</button>
-                        </span>
-                    {% else %}
-                        <span class="td">
-                        <button type="submit" formaction="/start_sniffer" class="btn btn-success" role="button">Start</button>
-                        <button type="submit" class="btn btn-danger" role="button">Delete</button>
-                        </span>
-                    {% endif %}
-                    </form>
-                {% endfor %}
-                </div>
-                <h2>Add new task</h2>
+                            {% for task in tasks %}
+                            <tr id="{{ task['_id'] }}">
+                                <td>{{ task['_id'] }}</td>
+                                <td>{{ task.iface }}</td>
+                                <td>{{ task.active }}</td>
+                                <td>{{ task.thread_id }}</td>
+                                {% if task.dynamic %}
+                                    <td>Dynamic</td>
+                                {% else %}
+                                    <td>Static</td>
+                                {% endif %}
+                                <td>{{ task.schedule }}</td>
+                                {% if task.active %}
+                                    <td>
+                                        <button  class="btn btn-danger" onclick="stop_task(this)">
+                                            <i class="fa fa-stop"></i>
+                                        </button>
+                                        <button  class="btn btn-warning" onclick="remove_task(this)">
+                                            <i class="fa fa-trash-o fa-lg"></i>
+                                        </button>
 
-                <form class="form-inline" style="margin-right: 10px;", method="post" action="/add_task">
+                                    </td>
+                                {% else %}
+                                    <td>
+                                        <button  class="btn btn-success" onclick="start_task(this)">
+                                            <i class="fa fa-play"></i>
+                                        </button>
+                                        <button  class="btn btn-warning" onclick="remove_task(this)">
+                                            <i class="fa fa-trash-o fa-lg"></i>
+                                        </button>
+                                    </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        </table>
+            <p id="errormsg"></p>
+
+            <h2>Add new task</h2>
+
+            <form class="form-inline" style="margin-right: 10px;", method="post" action="/add_task">
                 <div class="form-group" style="margin-right: 10px;">
                     <select name="iface" id="sel_iface" class="form-select form-select-sm" aria-label=".form-select-sm example">
                         {% for iface in interfaces %}
@@ -169,15 +182,18 @@
                 <div class="form-group" style="margin-left: 10px;">
                     <button type="submit" class="btn btn-primary mb-2">Add</button>
                 </div>
-                </form>
-
+            </form>
             </main>
         </div>
     </div>
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script>
+        feather.replace()
+    </script>
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="{{url_for('static', filename='sniffplayer.js')}}"></script>
     <!-- Github buttons -->
     <script async defer src="https://buttons.github.io/buttons.js"></script>

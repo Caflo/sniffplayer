@@ -1,20 +1,31 @@
 import flask
 import click
+from datetime import datetime
 from flask import Flask, session, render_template, jsonify
-import json
 from flask_pymongo import PyMongo
 from pymongo.write_concern import DEFAULT_WRITE_CONCERN
 from scapy.utils import wrpcap
+from werkzeug.utils import send_file, send_from_directory
 from sniffplayer import sniffer
 from sniffplayer.dbhandler import TaskDBHandler
 import sniffplayer.log
 from sniffplayer.pcapture import ThreadHandler, ThreadHandler2
-from sniffplayer.utils import get_network_interfaces
+from sniffplayer.utils import delete_folder_contents, get_file_creation_date, get_iface_info, get_network_info, get_network_interfaces, get_os_info
 import argparse
 import sniffplayer.ctrl
 import os
 import logging
+from apscheduler.schedulers.background import BackgroundScheduler
+
 logger = logging.getLogger(__name__)
+
+def sensor():
+    """ Function for test purposes. """
+    print("Scheduler is alive!")
+
+sched = BackgroundScheduler(daemon=True)
+sched.add_job(sensor,'interval',seconds=60)
+sched.start()
 
 DEFAULT_WORK_DIR = 'sniffplayer'
 DBNAME = 'sniffplayerdb'
@@ -56,10 +67,11 @@ def dashboard():
 #    tasks = sniff_ctrl.read_sniffers(db)
     return render_template('dashboard.html')
 
-@app.route("/ifaces")
+@app.route("/osinfo")
 def ifaces():
-    ifaces = get_network_interfaces()
-    return render_template('ifaces.html', interfaces=ifaces)
+    iface_info = get_iface_info()
+    os_info = get_os_info()
+    return render_template('osinfo.html', interfaces=iface_info, os_info=os_info)
 
 @app.route("/tasks", methods=['GET', 'POST'])
 def tasks():
@@ -82,8 +94,34 @@ def remove_task():
     task_handler.delete(sniffer_id)
     return flask.redirect("/tasks")
 
-@app.route("/start_sniffer", methods=['POST'])
-def start_sniffer():
+@app.route("/start_all", methods=['POST'])
+def start_all():
+    id_list = flask.request.form['id'].strip(',') # all ID's separated by comma`
+    for id in (0, id_list):
+        task = task_handler.read_by_id(id)
+        pcap_abs_filename = os.path.join(pcap_path, f"task_{id}.pcap")
+        thread_id = thread_handler.start_sniffer(task, pcap_abs_filename) 
+        task['active'] = True
+        task['thread_id'] = thread_id
+        task_handler.update(task)
+    return flask.redirect("/tasks")
+
+@app.route("/stop_all", methods=['POST'])
+def stop_all():
+    id_list = flask.request.form['id'].strip(',') # all ID's separated by comma`
+    for id in (0, id_list):
+        task = task_handler.read_by_id(id)
+        pkts = thread_handler.stop_sniffer(task)
+        if not task['dynamic']: # if in static mode, write all captured packets once stopped
+            pcap_abs_filename = os.path.join(pcap_path, f"task_{id}.pcap")
+            wrpcap(pcap_abs_filename, pkts, append=True)
+        task['active'] = False
+        task['thread_id'] = None
+        task_handler.update(task)
+    return flask.redirect("/tasks")
+
+@app.route("/start_task", methods=['POST'])
+def start_task():
     id = flask.request.form['id']
     task = task_handler.read_by_id(id)
     
@@ -92,13 +130,10 @@ def start_sniffer():
     task['active'] = True
     task['thread_id'] = thread_id
     task_handler.update(task)
-#    self.__update_sniffer_task(sniffer_task)
-#    self.save_sniffers()
-
     return flask.redirect("/tasks")
 
-@app.route("/stop_sniffer", methods=['POST'])
-def stop_sniffer():
+@app.route("/stop_task", methods=['POST'])
+def stop_task():
     id = flask.request.form['id']
     task = task_handler.read_by_id(id)
     pkts = thread_handler.stop_sniffer(task)
@@ -110,7 +145,35 @@ def stop_sniffer():
     task_handler.update(task)
     return flask.redirect("/tasks")
 
+
+@app.route("/files", methods=['GET','POST'])
+def files():
+    files = os.listdir(pcap_path)
+    dates = []
+    for f in files:
+        creation_date = datetime.fromtimestamp(get_file_creation_date(os.path.join(pcap_path, f)))
+        dates.append(creation_date)
+    return render_template("files.html", files=files, dates=dates)
+
+
+@app.route("/files/<path:filename>", methods=['GET', 'POST'])
+def download(filename):
+    return send_from_directory(
+        os.path.abspath(pcap_path),
+        filename,
+        as_attachment=True,
+        environ=flask.request.environ
+    )
+
+@app.route("/clear_dir", methods=['GET','POST'])
+def clear_dir():
+    delete_folder_contents(pcap_path)
+    
    
+
+@app.route("/schedule", methods=['POST'])
+def schedule():
+    raise NotImplementedError()
 
 if __name__ == "__main__":
 

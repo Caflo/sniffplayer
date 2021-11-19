@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
+    <title>OS info</title>
     <script src="https://unpkg.com/feather-icons"></script>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet"/>
@@ -74,7 +74,7 @@
                 <div class="position-sticky">
                     <ul class="nav flex-column">
                         <li class="nav-item">
-                          <a class="nav-link active" aria-current="page" href="#">
+                          <a class="nav-link" href="/dashboard">
                             <i data-feather="home"></i>
                             <span class="ml-2">Dashboard</span>
                           </a>
@@ -92,7 +92,7 @@
                           </a>
                         </li>
                         <li class="nav-item">
-                          <a class="nav-link" href="/files">
+                          <a class="nav-link active" aria-current="page" href="#">
                             <i data-feather="download"></i>
                             <span class="ml-2">Remote files</span>
                           </a>
@@ -107,39 +107,33 @@
                         <li class="breadcrumb-item active" aria-current="page">Overview</li>
                     </ol>
                 </nav>
-                <h1 class="h2">Dashboard</h1>
-                <div class="row my-4">
-                    <div class="col-12 col-md-6 col-lg-3 mb-4 mb-lg-0">
-                        <div class="card">
-                            <h5 class="card-header">Active sniffers</h5>
-                            <div class="card-body">
-                              <h5 class="card-title">345k</h5>
-                              <p class="card-text">Feb 1 - Apr 1, United States</p>
-                              <p class="card-text text-success">18.2% increase since last month</p>
-                            </div>
-                          </div>
-                    </div>
-                    <div class="col-12 col-md-6 mb-4 mb-lg-0 col-lg-3">
-                        <div class="card">
-                            <h5 class="card-header">Network statistics</h5>
-                            <div class="card-body">
-                              <h5 class="card-title">$2.4k</h5>
-                              <p class="card-text">Feb 1 - Apr 1, United States</p>
-                              <p class="card-text text-success">4.6% increase since last month</p>
-                            </div>
-                          </div>
-                    </div>
-                </div>
+
+                <table class="table">
+                <thead>
+                <tr>
+                    <th scope="col">Pcap name</th>
+                    <th scope="col">Creation date</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for i in range(0, files|length) %}
+                    <tr>
+                        <td><li><a href="{{ url_for('download', filename=files[i]) }}">{{ files[i] }}</a></li></td>
+                        <td>{{ dates[i] }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+                </table>
+                <button type="button" onclick="clear_dir()" class="btn btn-primary mb-2">Clear directory</button>
             </main>
         </div>
     </div>
     <script>
         feather.replace()
     </script>
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/5.0.0-alpha1/js/bootstrap.min.js" integrity="sha384-oesi62hOLfzrys4LxRF63OJCXdXDipiYWBnvTl9Y9/TRlw5xlKIEHpNyvvDShgf/" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/chartist.js/latest/chartist.min.js"></script>
     <!-- Github buttons -->
     <script async defer src="https://buttons.github.io/buttons.js"></script>
 </body>
