@@ -123,10 +123,10 @@
                     <th scope="col">Action</th>
                 </tr>
 
-                {% for task in sniffer_tasks %}
+                {% for task in tasks %}
                     <form class="tr" method="post" action="/remove_task">
                     <span class="td">
-                        <input type="hidden" name="id" value="{{ task.id }}">{{ task.id }}</span>
+                        <input type="hidden" name="id" value="{{ task['_id'] }}">{{ task['_id'] }}</span>
                     <span class="td">{{ task.iface }}</span>
                     <span class="td">{{ task.active }}</span>
                     <span class="td">{{ task.thread_id }}</span>
@@ -171,9 +171,6 @@
                 </div>
                 </form>
 
-                <footer class="pt-5 d-flex justify-content-between">
-                    <span>Copyright © 2019-2020 <a href="https://themesberg.com">Themesberg</a></span>
-                </footer>
             </main>
         </div>
     </div>

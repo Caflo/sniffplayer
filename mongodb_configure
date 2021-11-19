@@ -1,0 +1,3 @@
+Windows:
+md "C:\path\to\dir"
+"C:\Program Files\MongoDB\Server\5.0\bin\mongod.exe" --dbpath="c:\path\to\dir"

@@ -7,6 +7,7 @@ import bisect
 import pickle
 from re import A
 from typing import final
+from bson.objectid import ObjectId
 from scapy.all import *
 from .pcapture import ThreadHandler
 from .sniffer import Schedule, SnifferTask
@@ -51,7 +52,7 @@ class RequestHandlerServer:
             self.logger.info(f"Found configuration file: {JSON_CONF_ABSFILENAME}")
 
         self.logger.info(f"Reading sniffers from JSON...")
-        self.sniffer_tasks = self.read_sniffers() 
+        self.tasks = self.read_sniffers() 
         self.thread_handler = ThreadHandler()
     
     def init_server(self, host, port):
@@ -85,7 +86,7 @@ class RequestHandlerServer:
     def add_sniffer(self, interface, dynamic):
         try:
             sniffer_task = SnifferTask(id=self.get_free_id(), iface=interface, dynamic=dynamic)
-            bisect.insort(self.sniffer_tasks, sniffer_task)
+            bisect.insort(self.tasks, sniffer_task)
             self.save_sniffers()
             self.logger.info(f"Successfully added sniffer (id = {sniffer_task.id}), (iface = {sniffer_task.iface})")
         except Exception as ex:
@@ -98,8 +99,8 @@ class RequestHandlerServer:
     def remove_sniffer(self, sniffer_id):
         try:
             sniffer_task = self.get_sniffer_task_by_id(sniffer_id)
-            i = self.sniffer_tasks.index(sniffer_task)
-            self.sniffer_tasks.pop(i)
+            i = self.tasks.index(sniffer_task)
+            self.tasks.pop(i)
             self.save_sniffers()
             self.logger.info(f"Successfully removed sniffer (id = {sniffer_id - 1})")
         except Exception as ex:
@@ -112,11 +113,11 @@ class RequestHandlerServer:
     def clear_all_sniffers(self, conn): 
         try:
             self.__check_active_threads()
-            for sniffer_task in self.sniffer_tasks:
+            for sniffer_task in self.tasks:
                 if sniffer_task.active:
                     conn.send(b"Cannot do the requested action. Stop any active sniffer before cleaning up.")
                     return
-            self.sniffer_tasks.clear()
+            self.tasks.clear()
             self.save_sniffers()
 
             # also clean-up .pcap files
@@ -217,7 +218,7 @@ class RequestHandlerServer:
         try:
             self.__check_active_threads()
             sb = ""
-            for sniffer_task in self.sniffer_tasks:
+            for sniffer_task in self.tasks:
                 sb += f"ID: {sniffer_task.id}"
                 sb += ' - ' + f"Iface: {sniffer_task.iface}"
                 sb += ' - ' + f"Active: {sniffer_task.active}"
@@ -246,7 +247,7 @@ class RequestHandlerServer:
         try:
             self.__check_active_threads()
             sb = ""
-            for sniffer in self.sniffer_tasks:
+            for sniffer in self.tasks:
                 if sniffer.active:
                     sb += f"ID: {sniffer.id}"
                     sb += ' - ' + f"Iface: {sniffer.iface}"
@@ -299,7 +300,7 @@ class RequestHandlerServer:
 
 
     def get_sniffer_task_by_id(self, sniffer_id):
-        for st in self.sniffer_tasks:
+        for st in self.tasks:
             if st.id == sniffer_id:
                 return st
 
@@ -310,7 +311,7 @@ class RequestHandlerServer:
 
     def get_free_id(self):
         prev_id = 0
-        for sniffer_task in self.sniffer_tasks:
+        for sniffer_task in self.tasks:
             if sniffer_task.id-1 != prev_id:
                 return prev_id + 1
             prev_id += 1
@@ -320,34 +321,13 @@ class RequestHandlerServer:
         with open(JSON_CONF_ABSFILENAME, 'w') as f:
             f.write('[]')
 
-    def read_sniffers(self):
-        sniffer_tasks = []
-        with open(JSON_CONF_ABSFILENAME, 'r') as data_file:
-            json_data = data_file.read()
-        json_sniffer_tasks = json.loads(json_data)
-        for json_sniffer_task in json_sniffer_tasks:
-            id = json_sniffer_task['id']
-            iface = json_sniffer_task['iface']
-            active = bool(json_sniffer_task['active'] == True)
-            thread_id = None
-            if 'thread_id' in json_sniffer_task:
-                thread_id = json_sniffer_task['thread_id']
-            dynamic = bool(json_sniffer_task['dynamic'] == True)
-            schedule = None
-            if json_sniffer_task['schedule']:
-                mode = json_sniffer_task['schedule']['mode']
-                if mode == 'range':
-                    _from = json_sniffer_task['schedule']['from']
-                    _to = json_sniffer_task['schedule']['to']
-                    schedule = Schedule(mode=mode, schd_from=_from, schd_to=_to)
-                elif mode == 'interval':
-                    interval = json_sniffer_task['schedule']['interval']
-                    schedule = Schedule(mode=mode, interval=interval)
+    def read_sniffers(self, db=None):
+        tasks = db.tasks.find({})
+        for t in tasks:
+            self.tasks.append(t)
 
-            sniffer_task = SnifferTask(iface=iface, id=id, active=active, thread_id=thread_id, schedule=schedule, dynamic=dynamic)
-            sniffer_tasks.append(sniffer_task)
-
-        return sniffer_tasks
+        if db:
+            return tasks
 
     def save_sniffers(self):
         sniffer_tasksJSON = json.dumps(self.sniffer_tasks, default=lambda o: o.__dict__, sort_keys=True, indent=4)
@@ -394,6 +374,9 @@ class RequestHandlerServer:
                 inactive_sniffer_tasks.append(sniffer_task)
         return inactive_sniffer_tasks
 
+
+    def find_task_by_id(self, db, id):
+        return db.tasks.find({"_id": ObjectId(id)})
 
     def switch_action(self, args, conn):
         if args.cmd == 'stop-server':
