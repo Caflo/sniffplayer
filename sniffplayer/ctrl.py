@@ -82,36 +82,32 @@ class RequestHandlerServer:
         self.logger.info(f"Stopping server...")
         sys.exit(0) 
 
-    def add_sniffer(self, interface, dynamic, conn):
+    def add_sniffer(self, interface, dynamic):
         try:
             sniffer_task = SnifferTask(id=self.get_free_id(), iface=interface, dynamic=dynamic)
             bisect.insort(self.sniffer_tasks, sniffer_task)
             self.save_sniffers()
             self.logger.info(f"Successfully added sniffer (id = {sniffer_task.id}), (iface = {sniffer_task.iface})")
-            conn.send(b"Added sniffer successfully.")
         except Exception as ex:
             self.logger.info(f"Catched {type(ex).__name__}, continuing")
             message = traceback.format_exc()
             print(message)
         finally:
             self.logger.info(f"Closing client socket...")
-            conn.close()
 
-    def remove_sniffer(self, sniffer_id, conn):
+    def remove_sniffer(self, sniffer_id):
         try:
             sniffer_task = self.get_sniffer_task_by_id(sniffer_id)
             i = self.sniffer_tasks.index(sniffer_task)
             self.sniffer_tasks.pop(i)
             self.save_sniffers()
             self.logger.info(f"Successfully removed sniffer (id = {sniffer_id - 1})")
-            conn.send(b"Removed sniffer successfully.")
         except Exception as ex:
             self.logger.info(f"Catched {type(ex).__name__}, continuing")
             message = traceback.format_exc()
             print(message)
         finally:
             self.logger.info(f"Closing client socket...")
-            conn.close()
 
     def clear_all_sniffers(self, conn): 
         try:
@@ -137,7 +133,7 @@ class RequestHandlerServer:
             self.logger.info(f"Closing client socket...")
             conn.close()
 
-    def start_sniffer(self, sniffer_id, conn):
+    def start_sniffer(self, sniffer_id):
         try:
             sniffer_task = self.get_sniffer_task_by_id(sniffer_id)
             self.pcap_abs_filename = os.path.join(self.pcap_path, f"task_{sniffer_id}.pcap")
@@ -147,18 +143,13 @@ class RequestHandlerServer:
             self.__update_sniffer_task(sniffer_task)
             self.save_sniffers()
             self.logger.info(f"Updated status of sniffer with ID = {sniffer_id}")
-
-            msg = f"Sniffer {sniffer_id} started successfully"
-            l = struct.pack('!i', len(msg))
-            conn.sendall(l+msg.encode())
         except Exception as ex:
             self.logger.info(f"Catched {type(ex).__name__}, continuing")
             message = traceback.format_exc()
             print(message)
             self.logger.info(f"Closing client socket...")
-            conn.close()
             
-    def stop_sniffer(self, sniffer_id, conn, cycling=False):
+    def stop_sniffer(self, sniffer_id, cycling=False):
         try:
             sniffer_task = self.get_sniffer_task_by_id(sniffer_id)
             pkts = self.thread_handler.stop_sniffer(sniffer_task) # TODO could return an error code
@@ -173,50 +164,10 @@ class RequestHandlerServer:
             self.logger.info(f"Pcap file saved: {self.pcap_abs_filename}")
             if not sniffer_task.dynamic: # if in static mode, write all captured packets once stopped
                 wrpcap(self.pcap_abs_filename, pkts, append=True)
-
-            msg = f"Stop: Sniffer {sniffer_id} stopped successfully"
-            l = struct.pack('!i', len(msg))
-            conn.sendall(l+msg.encode())
-
-            pcap_filename = os.path.basename(self.pcap_abs_filename)
-            l = struct.pack('!i', len(pcap_filename))
-            conn.sendall(l+pcap_filename.encode())
-            
-            # read total size of file
-            f = open(self.pcap_abs_filename, 'rb')
-            filesize = 0
-            while True:
-                n_bytes = f.read(BUFSIZE_FILE)
-                filesize += len(n_bytes)
-                if not n_bytes:
-                    break
-            f.close()
-            # TODO wrap all read chunk functions in Utils.py
-
-            l = struct.pack('!i', filesize) # send total size of file
-            conn.sendall(l)
-
-            l = 0
-            self.logger.info(f"Sending file {pcap_filename}...")
-            f = open(self.pcap_abs_filename, 'rb')
-            data = f.read(BUFSIZE_FILE)
-            while (data):
-                l = struct.pack('!i', len(data))
-                conn.sendall(l+data)
-                data = f.read(BUFSIZE_FILE)
-
-            # add terminator at the end of each sequence
-            # sequence: <status msg> <pcap_filename> <filesize> <data in chunks> <terminator> 
-            term = '\n'
-            conn.sendall(term.encode())
-
-            f.close()
-            self.logger.info(f"File {pcap_filename} sent.")
         except Exception as ex:
             self.logger.info(f"Catched {type(ex).__name__}, continuing")
             message = traceback.format_exc()
             print(message)
-            conn.close()
  
     def start_all(self, conn):
         self.__check_active_threads()
