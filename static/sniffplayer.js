@@ -76,6 +76,3 @@ $('#sel_iface').on('click',function() {
 $('#sel_sniff_mode').on('click',function() {
     sniff_mode = $(this).val();
 });
-
-
-// files.html

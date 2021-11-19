@@ -3,13 +3,12 @@ import click
 from datetime import datetime
 from flask import Flask, session, render_template, jsonify
 from flask_pymongo import PyMongo
-from pymongo.write_concern import DEFAULT_WRITE_CONCERN
 from scapy.utils import wrpcap
 from werkzeug.utils import send_file, send_from_directory
 from sniffplayer import sniffer
 from sniffplayer.dbhandler import TaskDBHandler
 import sniffplayer.log
-from sniffplayer.pcapture import ThreadHandler, ThreadHandler2
+from sniffplayer.pcapture import ThreadHandler 
 from sniffplayer.utils import delete_folder_contents, get_file_creation_date, get_iface_info, get_network_info, get_network_interfaces, get_os_info
 import argparse
 import sniffplayer.ctrl
@@ -18,14 +17,6 @@ import logging
 from apscheduler.schedulers.background import BackgroundScheduler
 
 logger = logging.getLogger(__name__)
-
-def sensor():
-    """ Function for test purposes. """
-    print("Scheduler is alive!")
-
-sched = BackgroundScheduler(daemon=True)
-sched.add_job(sensor,'interval',seconds=60)
-sched.start()
 
 DEFAULT_WORK_DIR = 'sniffplayer'
 DBNAME = 'sniffplayerdb'
@@ -51,6 +42,25 @@ thread_handler = ThreadHandler()
 
 # TODO read working dir from config collection of mongoDB
 
+# eventually sync if thread crashed
+def sync():
+    tasks = task_handler.read_all()
+    for t in tasks:
+        entry = thread_handler.get_thread_by_task_id(t['_id'])
+        if t['active']:
+            if entry is not None: # check if it's alive in the thread queue
+                if not entry['thread'].thread.is_alive(): # sync
+                    t['active'] = False
+                    t['thread_id'] = None
+            else: # not present in thread queue, sync back to active: 'false'
+                t['active'] = False
+                t['thread_id'] = None
+        # eventually update
+        task_handler.update(t)
+
+sched = BackgroundScheduler(daemon=True)
+sched.add_job(sync,'interval',seconds=60)
+sched.start()
 
 @app.cli.command("set-config")
 @click.argument("path")
@@ -150,10 +160,13 @@ def stop_task():
 def files():
     files = os.listdir(pcap_path)
     dates = []
+    sizes = []
     for f in files:
         creation_date = datetime.fromtimestamp(get_file_creation_date(os.path.join(pcap_path, f)))
+        size = "{:.2f}".format(os.path.getsize(os.path.join(pcap_path, f)) / 1024)
         dates.append(creation_date)
-    return render_template("files.html", files=files, dates=dates)
+        sizes.append(size)
+    return render_template("files.html", pcap_path=pcap_path, files=files, dates=dates, sizes=sizes)
 
 
 @app.route("/files/<path:filename>", methods=['GET', 'POST'])
@@ -168,8 +181,9 @@ def download(filename):
 @app.route("/clear_dir", methods=['GET','POST'])
 def clear_dir():
     delete_folder_contents(pcap_path)
+    return flask.redirect("/files")
     
-   
+
 
 @app.route("/schedule", methods=['POST'])
 def schedule():

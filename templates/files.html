@@ -108,10 +108,13 @@
                     </ol>
                 </nav>
 
+                <h3>Contents of <b>"{{ pcap_path[:-1] }}"</b></h5>
+
                 <table class="table">
                 <thead>
                 <tr>
                     <th scope="col">Pcap name</th>
+                    <th scope="col">Size</th>
                     <th scope="col">Creation date</th>
                 </tr>
                 </thead>
@@ -119,12 +122,13 @@
                 {% for i in range(0, files|length) %}
                     <tr>
                         <td><li><a href="{{ url_for('download', filename=files[i]) }}">{{ files[i] }}</a></li></td>
+                        <td>{{ sizes[i] }} KB</td>
                         <td>{{ dates[i] }}</td>
                     </tr>
                 {% endfor %}
                 </tbody>
                 </table>
-                <button type="button" onclick="clear_dir()" class="btn btn-primary mb-2">Clear directory</button>
+                <a class="btn btn-primary" href="/clear_dir" role="button">Clear directory</a>
             </main>
         </div>
     </div>
