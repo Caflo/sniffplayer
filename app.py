@@ -1,6 +1,7 @@
+from platform import system
 import flask
 import click
-from datetime import datetime
+from datetime import date, datetime
 from flask import Flask, session, render_template, jsonify
 from flask_pymongo import PyMongo
 from scapy.utils import wrpcap
@@ -13,6 +14,7 @@ from sniffplayer.utils import delete_folder_contents, get_file_creation_date, ge
 import argparse
 import sniffplayer.ctrl
 import os
+import time
 import logging
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -42,11 +44,15 @@ thread_handler = ThreadHandler()
 
 # TODO read working dir from config collection of mongoDB
 
-# eventually sync if thread crashed
+# eventually sync if thread crashed #TODO fix and make it ajax
+#sync_flag = True
 #def sync():
+#    if not sync_flag:
+#        return
+#    print("Sync...")
 #    tasks = task_handler.read_all()
 #    for t in tasks:
-#        entry = thread_handler.get_thread_by_task_id(t['_id'])
+#        entry = thread_handler.get_thread_by_task(t)
 #        if t['active']:
 #            if entry is not None: # check if it's alive in the thread queue
 #                if not entry['thread'].thread.is_alive(): # sync
@@ -59,7 +65,7 @@ thread_handler = ThreadHandler()
 #        task_handler.update(t)
 #
 #sched = BackgroundScheduler(daemon=True)
-#sched.add_job(sync,'interval',seconds=60)
+#sched.add_job(sync,'interval',seconds=4)
 #sched.start()
 
 @app.cli.command("set-config")
@@ -73,9 +79,11 @@ def init_config(path):
 @app.route("/")
 @app.route("/dashboard") # default page
 def dashboard():
-    # HERE STATISTICS
-#    tasks = sniff_ctrl.read_sniffers(db)
-    return render_template('dashboard.html')
+    filter = {
+        "active": True
+    }
+    tasks = task_handler.read_all(filter=filter)
+    return render_template('dashboard.html', tasks=tasks)
 
 @app.route("/osinfo")
 def ifaces():
@@ -86,7 +94,7 @@ def ifaces():
 @app.route("/tasks", methods=['GET', 'POST'])
 def tasks():
     tasks = task_handler.read_all()
-    ifaces = get_network_interfaces()
+    ifaces = list(get_iface_info().keys())
     if flask.request.method == 'GET':
         return render_template('tasks.html', tasks=tasks, interfaces=ifaces)
 
@@ -94,14 +102,24 @@ def tasks():
 def add_task():
     iface = flask.request.form['iface']
     dynamic = flask.request.form["sniff_mode"] == 'dynamic'
-    task = sniffer.SnifferTask(iface=iface, active=False, dynamic=dynamic, schedule=None)
+    sched_from = None
+    sched_to = None
+    if 'schedule_from' in flask.request.form:
+#        sched_from = datetime.strptime(flask.request.form['schedule_from'], '%Y-%m-%dT%H:%M')
+        sched_from = flask.request.form['schedule_from']
+    if 'schedule_to' in flask.request.form:
+        sched_to = flask.request.form['schedule_to']
+    schedule = sniffer.Schedule(sched_from=sched_from, sched_to=sched_to) 
+    task = sniffer.SnifferTask(iface=iface, active=False, dynamic=dynamic, schedule=schedule)
     task_handler.create(task)
     return flask.redirect("/tasks")
 
 @app.route("/remove_task", methods=['POST'])
 def remove_task():
+#    sync_flag = False
     sniffer_id = flask.request.form['id']
     task_handler.delete(sniffer_id)
+#    sync_flag = True
     return flask.redirect("/tasks")
 
 @app.route("/start_all", methods=['POST'])
@@ -183,6 +201,16 @@ def clear_dir():
     delete_folder_contents(pcap_path)
     return flask.redirect("/files")
     
+def schedule_from(task): # handle starting
+    date = datetime.strptime(task.schedule._from, '%Y-%m-%dT%H:%M')
+    sched = BackgroundScheduler(daemon=True)
+    sched.add_job(start_task, date=date)
+
+
+def schedule_to(task): # handle starting
+    date = datetime.strptime(task.schedule._to, '%Y-%m-%dT%H:%M')
+    sched = BackgroundScheduler(daemon=True)
+    sched.add_job(stop_task, date=date)
 
 
 @app.route("/schedule", methods=['POST'])

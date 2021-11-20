@@ -136,7 +136,11 @@
                                 {% else %}
                                     <td>Static</td>
                                 {% endif %}
-                                <td>{{ task.schedule }}</td>
+                                {% if not task.schedule._from and not task.schedule._to %}
+                                    <td>No schedule</td>
+                                {% else %}
+                                    <td>from: {{ task.schedule._from }}<br>to: {{ task.schedule._to }}</td>
+                                {% endif %}
                                 {% if task.active %}
                                     <td>
                                         <button  class="btn btn-danger" onclick="stop_task(this)">
@@ -169,14 +173,22 @@
                 <div class="form-group" style="margin-right: 10px;">
                     <select name="iface" id="sel_iface" class="form-select form-select-sm" aria-label=".form-select-sm example">
                         {% for iface in interfaces %}
-                        <option value="{{ iface }}"">{{ iface }}</option>
+                        <option value="{{ iface }}">{{ iface }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="margin-right: 10px;">
                     <select name="sniff_mode" id="sel_sniff_mode" class="form-select form-select-sm" aria-label=".form-select-sm example">
-                        <option value="static"">Static</option>
-                        <option value="dynamic"">Dynamic</option>
+                        <option value="static">Static</option>
+                        <option value="dynamic">Dynamic</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-right: 10px;">
+                      <input type="datetime-local" name="schedule_from">
+                    </select>
+                </div>
+                <div class="form-group" style="margin-right: 10px;">
+                      <input type="datetime-local" name="schedule_to">
                     </select>
                 </div>
                 <div class="form-group" style="margin-left: 10px;">

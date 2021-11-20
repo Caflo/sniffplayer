@@ -30,7 +30,7 @@ class ThreadHandler:
         return t.thread.ident
         
     def stop_sniffer(self, task):
-        entry = self.__get_thread_by_task_id(task)
+        entry = self.get_thread_by_task(task)
         pkts = entry['thread'].stop()
         self.thread_queue.remove(entry)
         return pkts
@@ -38,9 +38,9 @@ class ThreadHandler:
     def schedule_sniffer(self, sniffer_id):
         raise NotImplementedError()
 
-    def get_thread_by_task_id(self, task):
+    def get_thread_by_task(self, task):
         result = None
         for entry in self.thread_queue:
-            if entry['task_id'] == task.id:
+            if entry['task_id'] == task['_id']:
                 return entry
         return result

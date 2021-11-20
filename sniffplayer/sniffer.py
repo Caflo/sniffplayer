@@ -13,12 +13,6 @@ class SnifferTask:
         return self.id < other.id
 
 class Schedule:
-    def __init__(self, mode, schd_from=None, schd_to=None, interval=None) -> None:
-        if mode not in ['range', 'interval']:
-            raise ValueError("Parameter 'mode' not valid. You can choose between 'range' and 'interval'")
-        self.mode = mode
-        if mode == 'range':
-            self._from = schd_from
-            self._to = schd_to
-        elif mode == 'interval':
-            self.interval = interval # expressed in minutes
+    def __init__(self, sched_from=None, sched_to=None) -> None:
+        self._from = sched_from
+        self._to = sched_to

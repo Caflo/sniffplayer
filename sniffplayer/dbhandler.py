@@ -11,14 +11,14 @@ class TaskDBHandler:
     # CRUD methods
 
     def create(self, task):
-        task = sniffer.SnifferTask(iface=task.iface, active=task.active, dynamic=task.dynamic, schedule=task.schedule)
+#        task = sniffer.SnifferTask(iface=task.iface, active=task.active, dynamic=task.dynamic, schedule=task.schedule)
         task_json = json.loads(json.dumps(task, default=lambda o: o.__dict__, sort_keys=True, indent=4))
         return self.db.tasks.insert_one(task_json)  # returns _id
 
-    def read_all(self):
-        tasks = self.db.tasks.find({})
+    def read_all(self, filter={}):
+        tasks = self.db.tasks.find(filter)
         return tasks
-    
+
     def read_by_id(self, id):
         task = self.db.tasks.find_one({"_id": ObjectId(id)})
         return task
