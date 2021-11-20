@@ -43,24 +43,24 @@ thread_handler = ThreadHandler()
 # TODO read working dir from config collection of mongoDB
 
 # eventually sync if thread crashed
-def sync():
-    tasks = task_handler.read_all()
-    for t in tasks:
-        entry = thread_handler.get_thread_by_task_id(t['_id'])
-        if t['active']:
-            if entry is not None: # check if it's alive in the thread queue
-                if not entry['thread'].thread.is_alive(): # sync
-                    t['active'] = False
-                    t['thread_id'] = None
-            else: # not present in thread queue, sync back to active: 'false'
-                t['active'] = False
-                t['thread_id'] = None
-        # eventually update
-        task_handler.update(t)
-
-sched = BackgroundScheduler(daemon=True)
-sched.add_job(sync,'interval',seconds=60)
-sched.start()
+#def sync():
+#    tasks = task_handler.read_all()
+#    for t in tasks:
+#        entry = thread_handler.get_thread_by_task_id(t['_id'])
+#        if t['active']:
+#            if entry is not None: # check if it's alive in the thread queue
+#                if not entry['thread'].thread.is_alive(): # sync
+#                    t['active'] = False
+#                    t['thread_id'] = None
+#            else: # not present in thread queue, sync back to active: 'false'
+#                t['active'] = False
+#                t['thread_id'] = None
+#        # eventually update
+#        task_handler.update(t)
+#
+#sched = BackgroundScheduler(daemon=True)
+#sched.add_job(sync,'interval',seconds=60)
+#sched.start()
 
 @app.cli.command("set-config")
 @click.argument("path")

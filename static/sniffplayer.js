@@ -1,6 +1,12 @@
 // tasks.html
 function remove_task(e) {
     var id = e.closest('tr').id;
+    // check task is not started
+    task_btn = e.previousElementSibling.getAttribute("class")
+    if (task_btn !== 'btn btn-success') { 
+        alert('You must first stop the task before deleting it!')
+        return
+    }
     var pos = $(e).parent().parent().index()
     xhttp = new XMLHttpRequest();
 
@@ -17,7 +23,7 @@ function remove_task(e) {
     });
 
     request.fail(function(jqXHR, textStatus) {
-        $("#errormsg")[0].innerHTML = "Something went wrong"
+        $("#errormsg")[0].innerHTML = "<style='color:red;'>Something went wrong."
     });
 }
 
@@ -41,7 +47,7 @@ function start_task(e) {
     });
 
     request.fail(function(jqXHR, textStatus) {
-        $("#errormsg")[0].innerHTML = "Something went wrong."
+        $("#errormsg")[0].innerHTML = "<style='color:red;'>Something went wrong."
     });
 }
 
