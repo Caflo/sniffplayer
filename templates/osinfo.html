@@ -108,41 +108,45 @@
                     </ol>
                 </nav>
 
-                <table class="table">
-                <thead>
-                <tr>
-                    <th scope="col">Interface</th>
-                    <th scope="col">Address family</th>
-                    <th scope="col">IP</th>
-                    <th scope="col">Subnet mask</th>
-                </tr>
-                </thead>
+                <div class="table-responsive">
+                    <table class="table">
+                    <thead>
+                    <tr>
+                        <th scope="col">Interface</th>
+                        <th scope="col">Address family</th>
+                        <th scope="col">IP</th>
+                        <th scope="col">Subnet mask</th>
+                    </tr>
+                    </thead>
+                    
+                    <tbody>
+                    {% for key, value in interfaces.items() %}
+                        <tr>
+                            <td>{{ key }}</td>
+                            <td>{{ interfaces[key][1][0] }}</td>
+                            <td>{{ interfaces[key][1][1] }}</td>
+                            <td>{{ interfaces[key][1][2] }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                    </table>
+                </div>
                 
-                <tbody>
-                {% for key, value in interfaces.items() %}
+                <div class="table-responsive">
+                    <table class="table">
+                    <thead>
                     <tr>
-                        <td>{{ key }}</td>
-                        <td>{{ interfaces[key][1][0] }}</td>
-                        <td>{{ interfaces[key][1][1] }}</td>
-                        <td>{{ interfaces[key][1][2] }}</td>
+                        <th scope="col">OS info</th>
                     </tr>
-                {% endfor %}
-                </tbody>
+                    </thead>
+    
+                    {% for s in os_info %}
+                        <tr>
+                            <td>{{ s }}</td>
+                        </tr>
+                    {% endfor %}
                 </table>
-
-                <table class="table">
-                <thead>
-                <tr>
-                    <th scope="col">OS info</th>
-                </tr>
-                </thead>
- 
-                {% for s in os_info %}
-                    <tr>
-                        <td>{{ s }}</td>
-                    </tr>
-                {% endfor %}
-                </table>
+                </div>
 
             </main>
         </div>
