@@ -1,7 +1,8 @@
 from platform import system
+from re import T
 import flask
 import click
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from flask import Flask, session, render_template, jsonify
 from flask_pymongo import PyMongo
 from scapy.utils import wrpcap
@@ -41,31 +42,29 @@ db = mongodb_client.db
 task_handler = TaskDBHandler(db)
 thread_handler = ThreadHandler()
 
+sched = BackgroundScheduler(daemon=True)
+sched.start()
+
 # TODO read working dir from config collection of mongoDB
 
-# eventually sync if thread crashed #TODO fix and make it ajax
-#sync_flag = True
-#def sync():
-#    if not sync_flag:
-#        return
-#    print("Sync...")
-#    tasks = task_handler.read_all()
-#    for t in tasks:
-#        entry = thread_handler.get_thread_by_task(t)
-#        if t['active']:
-#            if entry is not None: # check if it's alive in the thread queue
-#                if not entry['thread'].thread.is_alive(): # sync
-#                    t['active'] = False
-#                    t['thread_id'] = None
-#            else: # not present in thread queue, sync back to active: 'false'
-#                t['active'] = False
-#                t['thread_id'] = None
-#        # eventually update
-#        task_handler.update(t)
-#
-#sched = BackgroundScheduler(daemon=True)
-#sched.add_job(sync,'interval',seconds=4)
-#sched.start()
+# eventually sync if thread crashed #TODO fix and make it periodic and  ajax
+def sync():
+    print("Sync...")
+    tasks = task_handler.read_all()
+    for t in tasks:
+        entry = thread_handler.get_thread_by_task(t)
+        if t['active']:
+            if entry is not None: # check if it's alive in the thread queue
+                if not entry['thread'].thread.is_alive(): # sync
+                    t['active'] = False
+                    t['thread_id'] = None
+            else: # not present in thread queue, sync back to active: 'false'
+                t['active'] = False
+                t['thread_id'] = None
+        # eventually update
+        task_handler.update(t)
+
+sync()
 
 @app.cli.command("set-config")
 @click.argument("path")
@@ -148,8 +147,11 @@ def stop_all():
     return flask.redirect("/tasks")
 
 @app.route("/start_task", methods=['POST'])
-def start_task():
-    id = flask.request.form['id']
+def start_task(scheduled=False, t_id=None):
+    if not scheduled:
+        id = flask.request.form['id']
+    else:
+        id = t_id
     task = task_handler.read_by_id(id)
     
     pcap_abs_filename = os.path.join(pcap_path, f"task_{id}.pcap")
@@ -199,35 +201,33 @@ def clear_dir():
     return flask.redirect("/files")
 
 def schedule_from(task): # handle starting
-    id = flask.request.form['id']
-    task = task_handler.read_by_id(id)
-    
-    pcap_abs_filename = os.path.join(pcap_path, f"task_{id}.pcap")
-    thread_id = thread_handler.start_sniffer(task, pcap_abs_filename) 
-    task['active'] = True
-    task['thread_id'] = thread_id
-    task_handler.update(task)
+#    sched.add_job(start_task, 'date', run_date=datetime.now()+timedelta(seconds=10), args=[True, task['_id']])
+    sched.add_job(start_task, 'date', run_date=datetime.strptime(task['schedule']['_from'], '%Y-%m-%dT%H:%M'), args=[True, task['_id']])
 
-def schedule_to(task): # handle stopping
-    id = flask.request.form['id']
-    task = task_handler.read_by_id(id)
-    pkts = thread_handler.stop_sniffer(task)
-    if not task['dynamic']: # if in static mode, write all captured packets once stopped
-        pcap_abs_filename = os.path.join(pcap_path, f"task_{id}.pcap")
-        wrpcap(pcap_abs_filename, pkts, append=True)
-    task['active'] = False
-    task['thread_id'] = None
-    task_handler.update(task)
+#def schedule_to(task): # handle stopping
+#    id = flask.request.form['id']
+#    task = task_handler.read_by_id(id)
+#
+#    sched.add_job(thread_handler.stop_sniffer,'interval',seconds=4)
+#    sched.start()
+#    pkts = thread_handler.stop_sniffer(task)
+#
+#    if not task['dynamic']: # if in static mode, write all captured packets once stopped
+#        pcap_abs_filename = os.path.join(pcap_path, f"task_{id}.pcap")
+#        wrpcap(pcap_abs_filename, pkts, append=True)
+#    task['active'] = False
+#    task['thread_id'] = None
+#    task_handler.update(task)
 
 @app.route("/schedule_task", methods=['POST'])
 def schedule_task():
     id = flask.request.form['id']
     task = task_handler.read_by_id(id)
-    if task.is_scheduled():
-        if task.schedule._from:
-            schedule_from(task)
-        if task.schedule_to:
-            schedule_to(task)
+    if task['schedule']['_from']:
+        schedule_from(task)
+#    if task['schedule']['_from']:
+#        schedule_to(task)
+    return flask.redirect("/tasks")
 
 if __name__ == "__main__":
 

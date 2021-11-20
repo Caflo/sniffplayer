@@ -121,6 +121,7 @@
                                 <th scope="col">Sniff mode</th>
                                 <th scope="col">Schedule</th>
                                 <th scope="col">Action</th>
+                                <th scope="col">Schedule</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -142,6 +143,7 @@
                                     <td>from: {{ task.schedule._from }}<br>to: {{ task.schedule._to }}</td>
                                 {% endif %}
                                 {% if task.active %}
+                                {% set flag = 'disabled' %}
                                     <td>
                                         <button  class="btn btn-danger" onclick="stop_task(this)">
                                             <i class="fa fa-stop"></i>
@@ -149,9 +151,9 @@
                                         <button  class="btn btn-warning" onclick="remove_task(this)">
                                             <i class="fa fa-trash-o fa-lg"></i>
                                         </button>
-
                                     </td>
                                 {% else %}
+                                {% set flag = 'enabled' %}
                                     <td>
                                         <button  class="btn btn-success" onclick="start_task(this)">
                                             <i class="fa fa-play"></i>
@@ -161,6 +163,14 @@
                                         </button>
                                     </td>
                                 {% endif %}
+                                <td>
+                                    <button  {{ flag }} class="btn btn-success" onclick="schedule_task(this)">
+                                        <i class="fa fa-tasks"></i>
+                                    </button>
+                                    <button  {{ flag }} class="btn btn-warning" onclick="remove_schedule(this)">
+                                        <i class="fa fa-trash-o fa-lg"></i>
+                                    </button>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
