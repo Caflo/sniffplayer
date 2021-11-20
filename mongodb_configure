@@ -1,3 +1,3 @@
 Windows:
-md "C:\path\to\dir"
-"C:\Program Files\MongoDB\Server\5.0\bin\mongod.exe" --dbpath="c:\path\to\dir"
+create a directory: md "C:\path\to\dir"
+execute mongodb in that directory: "C:\Program Files\MongoDB\Server\5.0\bin\mongod.exe" --dbpath="c:\path\to\dir"

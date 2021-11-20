@@ -9,6 +9,18 @@ class SnifferTask:
         self.schedule = schedule 
         self.dynamic = dynamic  # static or dynamic
 
+    def is_scheduled(self):
+        if not self.schedule._from and not self.schedule._to:
+            return False
+        return True
+
+    def clear_schedule(self):
+        if self.schedule._from:
+            self.schedule._from = None
+        if self.schedule._to:
+            self.schedule._to = None
+            
+
     def __lt__(self, other):
         return self.id < other.id
 
@@ -16,3 +28,4 @@ class Schedule:
     def __init__(self, sched_from=None, sched_to=None) -> None:
         self._from = sched_from
         self._to = sched_to
+

@@ -12,7 +12,6 @@ import sniffplayer.log
 from sniffplayer.pcapture import ThreadHandler 
 from sniffplayer.utils import delete_folder_contents, get_file_creation_date, get_iface_info, get_network_info, get_network_interfaces, get_os_info
 import argparse
-import sniffplayer.ctrl
 import os
 import time
 import logging
@@ -32,7 +31,7 @@ app.logger.info(f"Working directory: {app.config.get('work_dir')}")
 
 working_dir = os.path.join(os.environ['TMP'], DEFAULT_WORK_DIR) # TODO set default passed as argument by script
 config_fname = os.path.join(working_dir, 'sniffer_tasks.json')
-pcap_path = os.path.join(working_dir, 'pcaps/')
+pcap_path = os.path.join(working_dir, 'pcaps')
 #sniff_ctrl = sniffplayer.ctrl.RequestHandlerServer(config_path=working_dir)
 
 # set-up DB
@@ -173,7 +172,6 @@ def stop_task():
     task_handler.update(task)
     return flask.redirect("/tasks")
 
-
 @app.route("/files", methods=['GET','POST'])
 def files():
     files = os.listdir(pcap_path)
@@ -185,7 +183,6 @@ def files():
         dates.append(creation_date)
         sizes.append(size)
     return render_template("files.html", pcap_path=pcap_path, files=files, dates=dates, sizes=sizes)
-
 
 @app.route("/files/<path:filename>", methods=['GET', 'POST'])
 def download(filename):
@@ -200,22 +197,37 @@ def download(filename):
 def clear_dir():
     delete_folder_contents(pcap_path)
     return flask.redirect("/files")
-    
+
 def schedule_from(task): # handle starting
-    date = datetime.strptime(task.schedule._from, '%Y-%m-%dT%H:%M')
-    sched = BackgroundScheduler(daemon=True)
-    sched.add_job(start_task, date=date)
+    id = flask.request.form['id']
+    task = task_handler.read_by_id(id)
+    
+    pcap_abs_filename = os.path.join(pcap_path, f"task_{id}.pcap")
+    thread_id = thread_handler.start_sniffer(task, pcap_abs_filename) 
+    task['active'] = True
+    task['thread_id'] = thread_id
+    task_handler.update(task)
 
+def schedule_to(task): # handle stopping
+    id = flask.request.form['id']
+    task = task_handler.read_by_id(id)
+    pkts = thread_handler.stop_sniffer(task)
+    if not task['dynamic']: # if in static mode, write all captured packets once stopped
+        pcap_abs_filename = os.path.join(pcap_path, f"task_{id}.pcap")
+        wrpcap(pcap_abs_filename, pkts, append=True)
+    task['active'] = False
+    task['thread_id'] = None
+    task_handler.update(task)
 
-def schedule_to(task): # handle starting
-    date = datetime.strptime(task.schedule._to, '%Y-%m-%dT%H:%M')
-    sched = BackgroundScheduler(daemon=True)
-    sched.add_job(stop_task, date=date)
-
-
-@app.route("/schedule", methods=['POST'])
-def schedule():
-    raise NotImplementedError()
+@app.route("/schedule_task", methods=['POST'])
+def schedule_task():
+    id = flask.request.form['id']
+    task = task_handler.read_by_id(id)
+    if task.is_scheduled():
+        if task.schedule._from:
+            schedule_from(task)
+        if task.schedule_to:
+            schedule_to(task)
 
 if __name__ == "__main__":
 
